@@ -5,11 +5,7 @@
     nixpkgs.url = "github:nixos/nixpkgs?ref=nixos-unstable";
 
     quickshell = {
-      # add ?ref=<tag> to track a tag
       url = "git+https://git.outfoxxed.me/outfoxxed/quickshell";
-
-      # THIS IS IMPORTANT
-      # Mismatched system dependencies will lead to crashes and other issues.
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -19,13 +15,8 @@
     nixpkgs,
     quickshell,
   }: let
-    # System types to support.
     supportedSystems = ["x86_64-linux" "x86_64-darwin" "aarch64-linux" "aarch64-darwin"];
-
-    # Helper function to generate an attrset '{ x86_64-linux = f "x86_64-linux"; ... }'.
     forAllSystems = nixpkgs.lib.genAttrs supportedSystems;
-
-    # Nixpkgs instantiated for supported system types.
     nixpkgsFor = forAllSystems (system: import nixpkgs {inherit system;});
 
     quickshell = system: inputs.quickshell.packages.${system}.default;
@@ -43,7 +34,17 @@
           configPackage = lib.mkDefault self.packages.${pkgs.system}.zdkshell-config;
         };
       };
-      default = self.homeManagerModules.zdkshell;
+
+      zdkhypr = {
+        imports = [./modules/home-manager/zdkhypr.nix];
+      };
+
+      default = {
+        imports = [
+          self.homeManagerModules.zdkshell
+          self.homeManagerModules.zdkhypr
+        ];
+      };
     };
 
     packages = forAllSystems (system: let
@@ -55,6 +56,7 @@
     in {
       zdkshell = zdkshell.default; # wrapper binary
       zdkshell-config = zdkshell.config; # bare config path for HM
+      zdkhypr-config = zdkshell.config; # bare config path for HM
       default = zdkshell.default;
     });
 
