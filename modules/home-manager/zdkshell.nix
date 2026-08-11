@@ -1,43 +1,40 @@
-# Home Manager module
 {
-  inputs,
-  lib,
-}: {
   config,
+  lib,
   pkgs,
   ...
 }: let
-  inherit (lib) maintainers;
-  inherit (lib.modules) mkIf;
-  inherit (lib.options) mkEnableOption mkPackageOption;
+  inherit (lib) mkIf mkEnableOption mkPackageOption mkOption types;
 
   cfg = config.programs.zdkshell;
 in {
-  imports = [
-  ];
-
-  meta.maintainers = with maintainers; [sknutsen];
-
-  # conceptual
   options.programs.zdkshell = {
     enable = mkEnableOption "zdkshell";
-    package = mkPackageOption pkgs "quickshell" {}; # from your flake input/overlay
-    systemd.enable = mkEnableOption "autostart" // {default = true;};
+
+    package = mkPackageOption pkgs "quickshell" {
+      nullable = true;
+    };
+
+    configPackage = mkOption {
+      type = types.package;
+      description = "Packaged zdkshell Quickshell config (share/zdkshell).";
+    };
+
+    systemd.enable = mkEnableOption "zdkshell systemd autostart" // {default = true;};
   };
 
   config = mkIf cfg.enable {
     programs.quickshell = {
       enable = true;
-      package = cfg.package; # inputs.quickshell.packages.${pkgs.system}.default
-      configs.zdkshell = "${pkgs.zdkshell}/share/zdkshell"; # or ./../../../shell
+      package = cfg.package;
+      configs.zdkshell = "${cfg.configPackage}/share/zdkshell";
       activeConfig = "zdkshell";
       systemd = {
         enable = cfg.systemd.enable;
-        target = "hyprland-session.target"; # once Hyprland is in the picture
+        target = "hyprland-session.target";
       };
     };
 
-    # themes (see below)
-    xdg.configFile."zdesktop/themes.toml".source = ../../../themes.toml;
+    xdg.configFile."zdesktop/themes.toml".source = ../../themes.toml;
   };
 }

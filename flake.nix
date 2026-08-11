@@ -31,9 +31,17 @@
     quickshell = system: inputs.quickshell.packages.${system}.default;
   in {
     homeManagerModules = {
-      zdkshell = import ./modules/home-manager/zdkshell.nix {
-        inherit inputs;
-        lib = nixpkgs.lib;
+      zdkshell = {
+        pkgs,
+        lib,
+        ...
+      }: {
+        imports = [./modules/home-manager/zdkshell.nix];
+
+        programs.zdkshell = {
+          package = lib.mkDefault inputs.quickshell.packages.${pkgs.system}.default;
+          configPackage = lib.mkDefault self.packages.${pkgs.system}.zdkshell-config;
+        };
       };
       default = self.homeManagerModules.zdkshell;
     };
