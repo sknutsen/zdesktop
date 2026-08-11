@@ -1,0 +1,23 @@
+# Nix
+result
+result-*
+.direnv/
+
+# Editor / IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+*.qmlc
+*.jsc
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local / secrets
+.env
+.env.*
+!.env.example
+*.local
