@@ -14,6 +14,7 @@ Rectangle {
     property int iconSourceIndex: 0
 
     Layout.preferredWidth: Theme.workspaceButtonSize
+    Layout.minimumWidth: workspaceText.width + 10
     Layout.preferredHeight: Theme.workspaceButtonSize
     radius: Theme.smallRadius
 
@@ -83,6 +84,7 @@ Rectangle {
     }
 
     Text {
+        id: workspaceText
         anchors.centerIn: parent
         visible: !wsIcon.visible
         text: {
