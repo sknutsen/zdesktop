@@ -26,11 +26,11 @@ hl.monitor({
   scale = 1,
 })
 
-local bar = "zdkshell"
+local bar = "qs -c zdkshell"
 local browser = "zen-twilight"
 local emailClient = "thunderbird"
 local fileManager = "thunar"
-local menu = "qs -p ../shell/ ipc call launcher open"
+local menu = "qs -c zdkshell ipc call launcher open"
 -- local menu = "rofi -show drun"
 local pwm = "keepassxc"
 local terminal = "ghostty"
@@ -43,7 +43,7 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("wl-paste --type text --watch cliphist store")
   hl.exec_cmd("wl-paste --type image --watch cliphist store")
   hl.exec_cmd("hypridle")
-  hl.exec_cmd("qs -p ../shell/")
+  hl.exec_cmd(bar)
 end)
 
 hl.config({
