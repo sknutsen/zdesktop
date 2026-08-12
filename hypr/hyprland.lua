@@ -59,11 +59,7 @@ hl.config({
         },
         angle = 45,
       },
-      inactive_border = {
-        colors = {
-          "rbga(595959aa)",
-        },
-      },
+      inactive_border = "rbga(595959aa)",
     },
     resize_on_border = false,
     allow_tearing = false,
@@ -168,18 +164,18 @@ hl.config({
   },
 })
 
-hl.gesture({
-  -- fingers = 3,
-  -- direction = "horizontal",
-  -- action = "workspace"
-})
+-- hl.gesture({
+-- fingers = 3,
+-- direction = "horizontal",
+-- action = "workspace"
+-- })
 
 -- Example per-device config
 -- See https://wiki.hypr.land/Configuring/Advanced-and-Cool/Devices/ for more
-hl.device({
-  -- name        = "epic-mouse-v1",
-  -- sensitivity = -0.5,
-})
+-- hl.device({
+-- name        = "epic-mouse-v1",
+-- sensitivity = -0.5,
+-- })
 
 local mainMod = "SUPER" -- Sets "Windows" key as main modifier
 
@@ -358,7 +354,7 @@ local pwmTag = {
 }
 
 function addWindowRule(wsId, group)
-  for app in group do
+  for i, app in group do
     hl.window_rule({
       match = { initial_class = app },
       workspace = wsId,
