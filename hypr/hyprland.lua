@@ -30,7 +30,8 @@ local bar = "zdkshell"
 local browser = "zen-twilight"
 local emailClient = "thunderbird"
 local fileManager = "thunar"
-local menu = "rofi -show drun"
+local menu = "qs -p ../shell/ ipc call launcher open"
+-- local menu = "rofi -show drun"
 local pwm = "keepassxc"
 local terminal = "ghostty"
 
@@ -42,6 +43,7 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("wl-paste --type text --watch cliphist store")
   hl.exec_cmd("wl-paste --type image --watch cliphist store")
   hl.exec_cmd("hypridle")
+  hl.exec_cmd("qs -p ../shell/")
 end)
 
 hl.config({
@@ -317,6 +319,16 @@ hl.window_rule({
   no_focus = true,
 })
 
+hl.window_rule({
+  name = "zdk-launcher",
+  match = {
+    title = "zdk-launcher",
+  },
+
+  float = true,
+})
+
+-- Tags
 local browserTag = {
   "zen-twilight",
   "librewolf",

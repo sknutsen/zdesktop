@@ -6,6 +6,7 @@ import Quickshell.Hyprland
 import Quickshell.Widgets
 import qs.core
 import qs.controlcenter
+import qs.state
 
 PanelWindow {
     id: root
@@ -71,7 +72,17 @@ PanelWindow {
                 }
             }
 
+            TrayArea {}
+
             ClockWidget {}
         }
+    }
+
+    PanelTooltip {
+        visible: logoButton.hovered
+        anchorWindow: root
+        anchorItem: logoButton
+        label: "Control Center"
+        anchorY: Theme.panelHeight
     }
 }

@@ -1,8 +1,12 @@
+//@ pragma UseQApplication
+
 import Quickshell
 import QtQuick
 import qs.controlcenter
 import qs.core
+import qs.launcher
 import qs.panel
+import qs.state
 
 Scope {
     id: root
@@ -39,4 +43,8 @@ Scope {
     ControlCenterWindow {
         panelWindow: root.activePanelWindow
     }
+
+    LauncherWindow {}
+
+    IpcHandlers {}
 }
