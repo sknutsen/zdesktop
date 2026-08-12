@@ -59,7 +59,7 @@ hl.config({
         },
         angle = 45,
       },
-      inactive_border = "rbga(595959aa)",
+      inactive_border = "rgba(595959aa)",
     },
     resize_on_border = false,
     allow_tearing = false,
@@ -354,7 +354,7 @@ local pwmTag = {
 }
 
 function addWindowRule(wsId, group)
-  for i, app in group do
+  for i, app in pairs(group) do
     hl.window_rule({
       match = { initial_class = app },
       workspace = wsId,
