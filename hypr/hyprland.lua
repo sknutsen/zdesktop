@@ -249,6 +249,14 @@ hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"), { locked = tr
 hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"), { locked = true })
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"), { locked = true })
 
+-- Workspaces
+local wsBrowser = "name:browser"
+local wsComms = "name:comms"
+local wsEmail = "name:email"
+local wsGames = "name:games"
+local wsMusic = "name:music"
+local wsPwm = "name:pwm"
+
 hl.workspace_rule({
   workspace = "1",
   monitor = "DP-2",
@@ -256,38 +264,38 @@ hl.workspace_rule({
 })
 
 hl.workspace_rule({
-  workspace = "name:games",
+  workspace = wsGames,
   monitor = "DP-2",
 })
 
 hl.workspace_rule({
-  workspace = "name:browser",
+  workspace = wsBrowser,
   monitor = "DP-1",
   default = true,
   on_created_empty = browser,
 })
 
 hl.workspace_rule({
-  workspace = "name:email",
+  workspace = wsEmail,
   monitor = "HDMI-A-1",
   default = true,
   on_created_empty = emailClient,
 })
 
 hl.workspace_rule({
-  workspace = "name:comms",
+  workspace = wsComms,
   monitor = "HDMI-A-1",
 })
 
 hl.workspace_rule({
-  workspace = "name:pwm",
+  workspace = wsPwm,
   monitor = "HDMI-A-2",
   default = true,
   on_created_empty = pwm,
 })
 
 hl.workspace_rule({
-  workspace = "name:music",
+  workspace = wsMusic,
   monitor = "HDMI-A-2",
 })
 
@@ -362,9 +370,9 @@ function addWindowRule(wsId, group)
   end
 end
 
-addWindowRule("browser", browserTag)
-addWindowRule("comms", commsTag)
-addWindowRule("email", emailTag)
-addWindowRule("games", gamesTag)
-addWindowRule("music", musicTag)
-addWindowRule("pwm", pwmTag)
+addWindowRule(wsBrowser, browserTag)
+addWindowRule(wsComms, commsTag)
+addWindowRule(wsEmail, emailTag)
+addWindowRule(wsGames, gamesTag)
+addWindowRule(wsMusic, musicTag)
+addWindowRule(wsPwm, pwmTag)
