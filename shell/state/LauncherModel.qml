@@ -1,7 +1,6 @@
 pragma Singleton
 import QtQml
 import Quickshell
-import Quickshell.Io
 import qs.core
 
 Singleton {
@@ -154,12 +153,17 @@ Singleton {
         const allEntries = [...DesktopEntries.applications.values];
 
         for (const entry of allEntries) {
+            if (!entry.command || entry.command.length === 0) {
+                continue;
+            }
+
             // TODO: clean. not really necessary
             const app = {
                 "name": entry.name,
                 "generic": entry.genericName,
                 "comment": entry.comment,
                 "exec": entry.command,
+                "workingDirectory": entry.workingDirectory,
                 "icon": entry.icon,
                 "categories": entry.categories,
                 "startupWmClass": entry.startupClass,
@@ -268,12 +272,14 @@ Singleton {
     }
 
     function launchApp(app) {
-        if (!app) {
+        if (!app || !app.exec || app.exec.length === 0) {
             return;
         }
 
-        launchProcess.command = app.exec;
-        launchProcess.running = true;
+        Quickshell.execDetached({
+            "command": app.exec,
+            "workingDirectory": app.workingDirectory || ""
+        });
         root.close();
     }
 
@@ -285,12 +291,5 @@ Singleton {
         }
 
         root.launchApp(apps[root.selectedIndex]);
-    }
-
-    Process {
-        id: launchProcess
-
-        command: ["sh", "-c", "exit 0"]
-        running: false
     }
 }
