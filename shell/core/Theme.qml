@@ -78,16 +78,18 @@ Singleton {
         root.warning = value("term_color3", root.warning);
         root.danger = value("term_color1", root.danger);
         root.dangerSurface = value("term_color0", root.surface);
-        root.applySystemAppearance();
+
+        if (sectionValue(themeText, "active", "apply_system_theme", "false") === "true") {
+            root.applySystemAppearance();
+        }
     }
 
     function applySystemAppearance() {
         const scheme = root.dark ? "prefer-dark" : "prefer-light";
-        let script = "command -v gsettings >/dev/null 2>&1 || exit 0; "
-            + "gsettings set org.gnome.desktop.interface color-scheme " + scheme;
-        if (root.gtkTheme.length > 0) {
-            script += "; gsettings set org.gnome.desktop.interface gtk-theme " + JSON.stringify(root.gtkTheme);
-        }
+        const gtkTheme = root.gtkTheme.length > 0 ? root.gtkTheme : "Adwaita";
+        const script = "command -v gsettings >/dev/null 2>&1 || exit 0; "
+            + "gsettings set org.gnome.desktop.interface color-scheme " + scheme
+            + "; gsettings set org.gnome.desktop.interface gtk-theme " + JSON.stringify(gtkTheme);
         Quickshell.execDetached({
             command: ["sh", "-c", script]
         });
