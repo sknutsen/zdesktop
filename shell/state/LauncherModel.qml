@@ -67,32 +67,13 @@ Singleton {
         const allEntries = [...DesktopEntries.applications.values];
 
         for (const entry of allEntries) {
-            if (!entry.command || entry.command.length === 0) {
+            if (!entry.command || entry.command.length === 0 || !entry.name) {
                 continue;
             }
 
-            if (!entry.name) {
-                continue;
-            }
-
-            // TODO: clean. not really necessary
-            const app = {
-                "id": entry.id || "",
-                "name": entry.name || "",
-                "generic": entry.genericName || "",
-                "comment": entry.comment || "",
-                "exec": entry.command,
-                "workingDirectory": entry.workingDirectory,
-                "icon": entry.icon,
-                "categories": LauncherFilter.toStringList(entry.categories),
-                "keywords": LauncherFilter.toStringList(entry.keywords),
-                "startupWmClass": entry.startupClass || "",
-                "actions": entry.actions
-            };
-
-            app.primaryCategory = root.primaryCategory(app);
-            categoryCounts[app.primaryCategory] = (categoryCounts[app.primaryCategory] || 0) + 1;
-            apps.push(app);
+            const category = root.primaryCategory(entry);
+            categoryCounts[category] = (categoryCounts[category] || 0) + 1;
+            apps.push(entry);
         }
 
         const categories = [
@@ -191,15 +172,20 @@ Singleton {
         root.selectedIndex = Math.max(0, Math.min(index, apps.length - 1));
     }
 
-    function launchApp(app) {
-        if (!app || !app.exec || app.exec.length === 0) {
+    function launchApp(entry) {
+        if (!entry || !entry.command || entry.command.length === 0) {
             return;
         }
 
-        Quickshell.execDetached({
-            "command": app.exec,
-            "workingDirectory": app.workingDirectory || ""
-        });
+        if (typeof entry.execute === "function") {
+            entry.execute();
+        } else {
+            Quickshell.execDetached({
+                "command": entry.command,
+                "workingDirectory": entry.workingDirectory || ""
+            });
+        }
+
         root.close();
     }
 

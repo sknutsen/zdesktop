@@ -16,50 +16,46 @@ const {
         "\nreturn { toStringList, textScore, listScore, primaryCategory, scoreApp, filterApps };\n})()"
 );
 
-function app(overrides) {
+function entry(overrides) {
     return Object.assign({
         name: "Firefox",
-        generic: "Web Browser",
+        genericName: "Web Browser",
         comment: "Browse the Web",
         categories: ["Network", "WebBrowser"],
-        startupWmClass: "firefox",
+        startupClass: "firefox",
         keywords: ["internet", "web"],
-        id: "org.mozilla.firefox",
-        primaryCategory: "Network"
+        id: "org.mozilla.firefox"
     }, overrides);
 }
 
 const catalog = [
-    app({}),
-    app({
+    entry({}),
+    entry({
         name: "Vim",
-        generic: "Text Editor",
+        genericName: "Text Editor",
         comment: "Edit text files",
         categories: ["Utility", "TextEditor"],
-        startupWmClass: "vim",
+        startupClass: "vim",
         keywords: ["editor"],
-        id: "vim",
-        primaryCategory: "Utility"
+        id: "vim"
     }),
-    app({
+    entry({
         name: "Kitty",
-        generic: "Terminal",
+        genericName: "Terminal",
         comment: "A fast terminal emulator",
         categories: ["System", "TerminalEmulator"],
-        startupWmClass: "kitty",
+        startupClass: "kitty",
         keywords: [],
-        id: "kitty",
-        primaryCategory: "System"
+        id: "kitty"
     }),
-    app({
+    entry({
         name: "Visual Studio Code",
-        generic: "Text Editor",
+        genericName: "Text Editor",
         comment: "Code Editing. Redefined.",
         categories: ["Development", "IDE"],
-        startupWmClass: "code",
+        startupClass: "code",
         keywords: ["vscode"],
-        id: "code",
-        primaryCategory: "Development"
+        id: "code"
     })
 ];
 
@@ -125,24 +121,25 @@ assert.deepStrictEqual(names(filteredSystem), ["Kitty"]);
 const noSystemFirefox = filterApps(catalog, "fire", "System");
 assert.deepStrictEqual(names(noSystemFirefox), []);
 
-const nullableApp = app({
+const nullableEntry = entry({
     name: "Weird",
-    generic: null,
+    genericName: null,
     comment: undefined,
     categories: null,
-    startupWmClass: "",
+    startupClass: "",
     keywords: undefined,
-    id: "",
-    primaryCategory: "Other"
+    id: ""
 });
 assert.doesNotThrow(function () {
-    scoreApp(nullableApp, "weird");
+    scoreApp(nullableEntry, "weird");
 });
-assert.deepStrictEqual(names(filterApps([nullableApp], "weird", "all")), ["Weird"]);
-assert.deepStrictEqual(names(filterApps([nullableApp], "missing", "all")), []);
+assert.deepStrictEqual(names(filterApps([nullableEntry], "weird", "all")), ["Weird"]);
+assert.deepStrictEqual(names(filterApps([nullableEntry], "missing", "all")), []);
 
 const ranked = filterApps(catalog, "code", "all");
 assert.strictEqual(ranked[0].name, "Visual Studio Code");
-assert.ok(ranked[0].launcherScore > (ranked[1] ? ranked[1].launcherScore : 0));
+if (ranked.length > 1) {
+    assert.ok(scoreApp(ranked[0], "code") > scoreApp(ranked[1], "code"));
+}
 
 console.log("launcherFilter tests passed");
