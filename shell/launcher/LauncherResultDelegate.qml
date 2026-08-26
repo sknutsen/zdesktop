@@ -53,8 +53,8 @@ Rectangle {
             Text {
                 width: parent.width
                 text: {
-                    const detail = root.modelData.generic.length > 0 ? root.modelData.generic : root.modelData.comment;
-                    const category = LauncherModel.categoryLabel(root.modelData.primaryCategory);
+                    const detail = root.modelData.genericName || root.modelData.comment || "";
+                    const category = LauncherModel.categoryLabel(LauncherModel.primaryCategory(root.modelData));
 
                     if (detail.length > 0) {
                         return detail + "  -  " + category;

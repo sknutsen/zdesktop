@@ -109,15 +109,15 @@ function primaryCategory(categories) {
     return "Other";
 }
 
-function scoreApp(app, query) {
+function scoreApp(entry, query) {
     const needle = query == null ? "" : String(query).trim().toLowerCase();
-    const nameScore = textScore(app && app.name, needle);
-    const genericScore = textScore(app && app.generic, needle) * 0.65;
-    const commentScore = textScore(app && app.comment, needle) * 0.45;
-    const categoryValue = listScore(app && app.categories, needle) * 0.35;
-    const classScore = textScore(app && app.startupWmClass, needle) * 0.5;
-    const keywordScore = listScore(app && app.keywords, needle) * 0.55;
-    const idScore = textScore(app && app.id, needle) * 0.55;
+    const nameScore = textScore(entry && entry.name, needle);
+    const genericScore = textScore(entry && entry.genericName, needle) * 0.65;
+    const commentScore = textScore(entry && entry.comment, needle) * 0.45;
+    const categoryValue = listScore(entry && entry.categories, needle) * 0.35;
+    const classScore = textScore(entry && entry.startupClass, needle) * 0.5;
+    const keywordScore = listScore(entry && entry.keywords, needle) * 0.55;
+    const idScore = textScore(entry && entry.id, needle) * 0.55;
 
     return Math.max(nameScore, genericScore, commentScore, categoryValue, classScore, keywordScore, idScore);
 }
@@ -125,36 +125,41 @@ function scoreApp(app, query) {
 function filterApps(apps, query, category) {
     const source = apps || [];
     const needle = query == null ? "" : String(query).trim().toLowerCase();
-    const filtered = [];
+    const ranked = [];
 
     for (let i = 0; i < source.length; i++) {
-        const app = source[i];
-        if (category && category !== "all" && app.primaryCategory !== category) {
+        const entry = source[i];
+        if (category && category !== "all" && primaryCategory(entry.categories) !== category) {
             continue;
         }
 
-        const appScore = scoreApp(app, needle);
-        if (appScore <= 0) {
+        const score = scoreApp(entry, needle);
+        if (score <= 0) {
             continue;
         }
 
-        app.launcherScore = appScore;
-        filtered.push(app);
+        ranked.push({
+            "entry": entry,
+            "score": score
+        });
     }
 
-    filtered.sort(function (a, b) {
-        if (b.launcherScore !== a.launcherScore) {
-            return b.launcherScore - a.launcherScore;
+    ranked.sort(function (a, b) {
+        if (b.score !== a.score) {
+            return b.score - a.score;
         }
 
-        const nameA = appName(a);
-        const nameB = appName(b);
-        return nameA.localeCompare(nameB);
+        return entryName(a.entry).localeCompare(entryName(b.entry));
     });
+
+    const filtered = [];
+    for (let i = 0; i < ranked.length; i++) {
+        filtered.push(ranked[i].entry);
+    }
 
     return filtered;
 }
 
-function appName(app) {
-    return app && app.name ? String(app.name) : "";
+function entryName(entry) {
+    return entry && entry.name ? String(entry.name) : "";
 }
