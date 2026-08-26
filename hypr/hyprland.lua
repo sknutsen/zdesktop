@@ -35,6 +35,17 @@ local menu = "qs -c zdkshell ipc call launcher open"
 local pwm = "keepassxc"
 local terminal = "ghostty"
 
+local ok, theme = pcall(require, "zdesktop.theme")
+if not ok or type(theme) ~= "table" then
+  theme = {
+    active_border = "rgba(81a1c1ee)",
+    active_border_alt = "rgba(88c0d0ee)",
+    inactive_border = "rgba(3b4252aa)",
+    shadow = "rgba(2e3440ee)",
+    border_size = 1,
+  }
+end
+
 hl.on("hyprland.start", function()
   hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
   hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
@@ -48,18 +59,18 @@ end)
 
 hl.config({
   general = {
-    border_size = 1,
+    border_size = theme.border_size,
     gaps_in = 3,
     gaps_out = 2,
     col = {
       active_border = {
         colors = {
-          "rgba(33ccffee)",
-          "rgba(00ff99ee)",
+          theme.active_border,
+          theme.active_border_alt,
         },
         angle = 45,
       },
-      inactive_border = "rgba(595959aa)",
+      inactive_border = theme.inactive_border,
     },
     resize_on_border = false,
     allow_tearing = false,
@@ -76,7 +87,7 @@ hl.config({
       enabled = true,
       range = 4,
       render_power = 3,
-      color = "rgba(1a1a1aee)",
+      color = theme.shadow,
     },
     blur = {
       enabled = true,

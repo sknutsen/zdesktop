@@ -6,7 +6,10 @@
   inherit (lib) mkIf mkEnableOption;
 
   cfg = config.programs.zdkhypr;
+  desktop = config.zdesktop;
 in {
+  imports = [./theme.nix];
+
   options.programs.zdkhypr = {
     enable = mkEnableOption "zdesktop Hyprland config";
   };
@@ -17,21 +20,20 @@ in {
       configType = "lua";
       systemd.enable = true;
 
-      # Keep the full config as a sourced file so it stays editable as plain conf.
-      # Home Manager still owns enable/systemd so zdkshell can bind to hyprland-session.target.
-      extraLuaFiles = {
-        "main" = {
-          content = ../../hypr/hyprland.lua;
-          autoLoad = true;
+      extraLuaFiles =
+        {
+          "main" = {
+            content = ../../hypr/hyprland.lua;
+            autoLoad = true;
+          };
+        }
+        // lib.optionalAttrs desktop.applySystemTheme {
+          "zdesktop.theme" = {
+            content = desktop.generated.hyprLua;
+            autoLoad = false;
+          };
         };
-      };
     };
-
-    # xdg.configFile."hypr" = {
-    #   source = config.lib.file.mkOutOfStoreSymlink "${../../hypr}";
-    #   force = true;
-    #   recursive = true;
-    # };
 
     xdg.configFile."uwsm" = {
       source = config.lib.file.mkOutOfStoreSymlink "${../../uwsm}";

@@ -25,6 +25,8 @@ borderpx = 1   # border size in pixels (0 = none, 1-3 = recommended)
 #
 #   Dark mode: dark_mode = true                   (true = dark, false = light; default: true)
 #   GTK theme: gtk_theme = "Nordic"               (optional installed GTK theme name)
+#              If omitted, gtk-theme is reset to Adwaita (does not keep the previous theme).
+#   Palette colors also generate Hyprland borders, Ghostty, and GTK CSS.
 
 
 # ── Nord ──────────────────────────────────────────────────────────────────────
