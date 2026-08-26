@@ -4,7 +4,7 @@
   options,
   ...
 }: let
-  inherit (lib) mkIf mkOption mkDefault types;
+  inherit (lib) mkIf mkMerge mkOption mkDefault optionalAttrs optionalString types;
 
   cfg = config.zdesktop;
   themesData = lib.importTOML ../../themes.toml;
@@ -87,6 +87,136 @@
   desktopEnabled =
     (options.programs ? zdkshell && config.programs.zdkshell.enable)
     || (options.programs ? zdkhypr && config.programs.zdkhypr.enable);
+
+  # nvf vim.theme.{name,style} for each themes.toml name. Unmapped themes
+  # (and monochrome) fall back to base16 built from the terminal palette.
+  nvfThemeByName = {
+    nord = {name = "nord";};
+    dracula = {name = "dracula";};
+    gruvbox = {
+      name = "gruvbox";
+      style = "dark";
+    };
+    catppuccin = {
+      name = "catppuccin";
+      style = "mocha";
+    };
+    tokyonight = {
+      name = "tokyonight";
+      style = "night";
+    };
+    onedark = {
+      name = "onedark";
+      style = "dark";
+    };
+    solarized = {
+      name = "solarized";
+      style = "dark";
+    };
+    rosepine = {
+      name = "rose-pine";
+      style = "main";
+    };
+    everforest = {
+      name = "everforest";
+      style = "medium";
+    };
+    catppuccin-latte = {
+      name = "catppuccin";
+      style = "latte";
+    };
+    gruvbox-light = {
+      name = "gruvbox";
+      style = "light";
+    };
+    solarized-light = {
+      name = "solarized";
+      style = "light";
+    };
+    rosepine-dawn = {
+      name = "rose-pine";
+      style = "dawn";
+    };
+    tokyonight-day = {
+      name = "tokyonight";
+      style = "day";
+    };
+  };
+
+  nvfTheme = nvfThemeByName.${cfg.theme} or {name = "base16";};
+
+  nvfBase16Colors = {
+    base00 = css "term_bg" "2E3440";
+    base01 = css "normbgcolor" "434C5E";
+    base02 = css "selbgcolor" "434C5E";
+    base03 = css "term_color8" "4C566A";
+    base04 = css "term_color7" "E5E9F0";
+    base05 = css "term_fg" "D8DEE9";
+    base06 = css "selfgcolor" "ECEFF4";
+    base07 = css "term_color15" "ECEFF4";
+    base08 = css "term_color1" "BF616A";
+    base09 = css "term_color9" "BF616A";
+    base0A = css "term_color3" "EBCB8B";
+    base0B = css "term_color2" "A3BE8C";
+    base0C = css "term_color6" "88C0D0";
+    base0D = css "term_color4" "81A1C1";
+    base0E = css "term_color5" "B48EAD";
+    base0F = css "term_color11" "EBCB8B";
+  };
+
+  ghosttySettings =
+    if options.programs ? ghostty
+    then config.programs.ghostty.settings or {}
+    else {};
+  ghosttyOpacityRaw =
+    if builtins.isAttrs ghosttySettings
+    then ghosttySettings.background-opacity or 1
+    else 1;
+  ghosttyOpacity =
+    if builtins.isInt ghosttyOpacityRaw || builtins.isFloat ghosttyOpacityRaw
+    then ghosttyOpacityRaw
+    else if builtins.isString ghosttyOpacityRaw
+    then builtins.fromJSON ghosttyOpacityRaw
+    else 1;
+  # Neovim cannot take a fractional opacity; bg=NONE lets Ghostty's
+  # already-translucent background show through.
+  nvfTransparent = ghosttyOpacity < 1;
+
+  nvfThemeSettings =
+    {
+      enable = mkDefault true;
+      name = mkDefault nvfTheme.name;
+      transparent = mkDefault nvfTransparent;
+      extraConfig = ''
+        vim.opt.background = "${
+          if darkMode
+          then "dark"
+          else "light"
+        }"
+        ${optionalString (nvfTransparent && nvfTheme.name == "base16") ''
+          vim.api.nvim_create_autocmd("ColorScheme", {
+            group = vim.api.nvim_create_augroup("zdesktop_transparent", { clear = true }),
+            callback = function()
+              for _, group in ipairs({
+                "Normal", "NormalNC", "NormalFloat", "SignColumn",
+                "EndOfBuffer", "LineNr", "Folded", "FoldColumn",
+              }) do
+                vim.api.nvim_set_hl(0, group, { bg = "none" })
+              end
+            end,
+          })
+        ''}
+      '';
+    }
+    // optionalAttrs (nvfTheme ? style) {
+      style = mkDefault nvfTheme.style;
+    }
+    // optionalAttrs (nvfTheme.name == "base16") {
+      base16-colors = nvfBase16Colors;
+    };
+
+  nvfPresent = options.programs ? nvf;
+  applyNvfTheme = nvfPresent && config.programs.nvf.enable && cfg.applySystemTheme;
 in {
   options.zdesktop = {
     theme = mkOption {
@@ -96,7 +226,7 @@ in {
       example = "nord";
       description = ''
         Theme from themes.toml. Drives zdkshell, Hyprland borders, Ghostty,
-        GTK CSS, Qt (via GTK), and the desktop color-scheme.
+        GTK CSS, Qt (via GTK), nvf/Neovim, and the desktop color-scheme.
       '';
     };
 
@@ -105,7 +235,8 @@ in {
       default = true;
       description = ''
         Apply the selected theme outside the shell: Hyprland colors, Ghostty
-        palette, GTK CSS / color-scheme, and Qt following GTK.
+        palette, GTK CSS / color-scheme, Qt following GTK, and nvf/Neovim
+        when `programs.nvf` is imported and enabled.
 
         Sets GTK `colorScheme`, GTK 3/4 `gtk-application-prefer-dark-theme`
         (including `false` for light themes), `org.gnome.desktop.interface
@@ -120,6 +251,19 @@ in {
         here). If a theme omits `gtk_theme`, gtk-theme is reset to Adwaita
         rather than leaving the previous value. Palette colors are always
         applied as GTK CSS on top of that.
+
+        nvf/Neovim: maps the selected theme to `programs.nvf.settings.vim.theme`
+        (named plugin + style, or base16 from the terminal palette for
+        unmapped themes such as monochrome). Name, style, and transparent use
+        `mkDefault`, so an explicit nvf theme in the host config still wins.
+        Sets `vim.opt.background` from `dark_mode` so light variants (e.g.
+        rose-pine dawn) load correctly.
+
+        If Ghostty `background-opacity` is below 1, nvf `theme.transparent` is
+        enabled so Neovim's background is cleared and the terminal's
+        translucency shows through. Neovim cannot take a fractional opacity of
+        its own; stacking an opaque `Normal` highlight on a translucent
+        terminal is what looks mismatched.
 
         Hyprland's portal does not implement appearance. On NixOS, route
         Settings to the GTK portal:
@@ -148,50 +292,55 @@ in {
     };
   };
 
-  config = {
-    zdesktop.generated = {
-      inherit hyprLua ghosttyTheme gtkCss;
-    };
+  config = mkMerge [
+    {
+      zdesktop.generated = {
+        inherit hyprLua ghosttyTheme gtkCss;
+      };
 
-    gtk = mkIf (desktopEnabled && cfg.applySystemTheme) {
-      enable = mkDefault true;
-      colorScheme = mkDefault (
-        if darkMode
-        then "dark"
-        else "light"
-      );
-      theme = mkDefault {
-        name = resolvedGtkTheme;
-      };
-      gtk3.extraConfig = {
-        gtk-application-prefer-dark-theme = darkMode;
-      };
-      gtk4.extraConfig = {
-        gtk-application-prefer-dark-theme = darkMode;
-      };
-      gtk3.extraCss = mkDefault gtkCss;
-      gtk4.extraCss = mkDefault gtkCss;
-    };
-
-    dconf.settings = mkIf (desktopEnabled && cfg.applySystemTheme) {
-      "org/gnome/desktop/interface" = {
-        color-scheme =
+      gtk = mkIf (desktopEnabled && cfg.applySystemTheme) {
+        enable = mkDefault true;
+        colorScheme = mkDefault (
           if darkMode
-          then "prefer-dark"
-          else "prefer-light";
-        gtk-theme = resolvedGtkTheme;
+          then "dark"
+          else "light"
+        );
+        theme = mkDefault {
+          name = resolvedGtkTheme;
+        };
+        gtk3.extraConfig = {
+          gtk-application-prefer-dark-theme = darkMode;
+        };
+        gtk4.extraConfig = {
+          gtk-application-prefer-dark-theme = darkMode;
+        };
+        gtk3.extraCss = mkDefault gtkCss;
+        gtk4.extraCss = mkDefault gtkCss;
       };
-    };
 
-    qt = mkIf (desktopEnabled && cfg.applySystemTheme) {
-      enable = mkDefault true;
-      platformTheme.name = mkDefault "gtk3";
-    };
+      dconf.settings = mkIf (desktopEnabled && cfg.applySystemTheme) {
+        "org/gnome/desktop/interface" = {
+          color-scheme =
+            if darkMode
+            then "prefer-dark"
+            else "prefer-light";
+          gtk-theme = resolvedGtkTheme;
+        };
+      };
 
-    xdg.configFile."ghostty/themes/zdesktop" = mkIf (desktopEnabled && cfg.applySystemTheme) {
-      text = ghosttyTheme;
-    };
+      qt = mkIf (desktopEnabled && cfg.applySystemTheme) {
+        enable = mkDefault true;
+        platformTheme.name = mkDefault "gtk3";
+      };
 
-    programs.ghostty.settings.theme = mkIf (desktopEnabled && cfg.applySystemTheme) (mkDefault "zdesktop");
-  };
+      xdg.configFile."ghostty/themes/zdesktop" = mkIf (desktopEnabled && cfg.applySystemTheme) {
+        text = ghosttyTheme;
+      };
+
+      programs.ghostty.settings.theme = mkIf (desktopEnabled && cfg.applySystemTheme) (mkDefault "zdesktop");
+    }
+    (optionalAttrs nvfPresent {
+      programs.nvf.settings.vim.theme = mkIf applyNvfTheme nvfThemeSettings;
+    })
+  ];
 }
