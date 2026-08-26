@@ -6,7 +6,8 @@ import Quickshell.Io
 Singleton {
   id: root
 
-  property bool dark: true
+    property bool dark: true
+    property string gtkTheme: ""
 
     readonly property string transparent: "#00000000"
     property string bg: "#2E3440"
@@ -58,6 +59,7 @@ Singleton {
         const value = function(key, fallback) { return sectionValue(themeText, section, key, fallback); };
 
         root.dark = value("dark_mode", "true") !== "false";
+        root.gtkTheme = value("gtk_theme", "");
         root.bg = value("term_bg", root.bg);
         root.barBackground = value("normbgcolor", root.bg);
         root.surface = value("normbgcolor", root.bg);
@@ -76,6 +78,19 @@ Singleton {
         root.warning = value("term_color3", root.warning);
         root.danger = value("term_color1", root.danger);
         root.dangerSurface = value("term_color0", root.surface);
+        root.applySystemAppearance();
+    }
+
+    function applySystemAppearance() {
+        const scheme = root.dark ? "prefer-dark" : "prefer-light";
+        let script = "command -v gsettings >/dev/null 2>&1 || exit 0; "
+            + "gsettings set org.gnome.desktop.interface color-scheme " + scheme;
+        if (root.gtkTheme.length > 0) {
+            script += "; gsettings set org.gnome.desktop.interface gtk-theme " + JSON.stringify(root.gtkTheme);
+        }
+        Quickshell.execDetached({
+            command: ["sh", "-c", script]
+        });
     }
 
     FileView {
