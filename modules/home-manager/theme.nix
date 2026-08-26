@@ -4,7 +4,11 @@
   options,
   ...
 }: let
-  inherit (lib) mkIf mkMerge mkOption mkDefault optionalAttrs optionalString types;
+  inherit (lib) mkIf mkMerge mkOption mkDefault mkOverride optionalAttrs optionalString types;
+
+  # Beat nvf's own mkDefault (1000) so enable/name/style/transparent apply,
+  # but stay below a bare assignment (100) so the host config still wins.
+  mkNvfDefault = mkOverride 900;
 
   cfg = config.zdesktop;
   themesData = lib.importTOML ../../themes.toml;
@@ -164,14 +168,25 @@
     base0F = css "term_color11" "EBCB8B";
   };
 
+  # HM ghostty uses pkgs.formats.keyValue, which stores each value as a list
+  # (listsAsDuplicateKeys), e.g. background-opacity = [ 0.8 ].
+  unwrapKeyValue = v:
+    if builtins.isList v
+    then
+      if v == []
+      then null
+      else unwrapKeyValue (builtins.head v)
+    else v;
+
   ghosttySettings =
     if options.programs ? ghostty
     then config.programs.ghostty.settings or {}
     else {};
-  ghosttyOpacityRaw =
+  ghosttyOpacityRaw = unwrapKeyValue (
     if builtins.isAttrs ghosttySettings
     then ghosttySettings.background-opacity or 1
-    else 1;
+    else 1
+  );
   ghosttyOpacity =
     if builtins.isInt ghosttyOpacityRaw || builtins.isFloat ghosttyOpacityRaw
     then ghosttyOpacityRaw
@@ -184,16 +199,16 @@
 
   nvfThemeSettings =
     {
-      enable = mkDefault true;
-      name = mkDefault nvfTheme.name;
-      transparent = mkDefault nvfTransparent;
+      enable = mkNvfDefault true;
+      name = mkNvfDefault nvfTheme.name;
+      transparent = mkNvfDefault nvfTransparent;
       extraConfig = ''
         vim.opt.background = "${
           if darkMode
           then "dark"
           else "light"
         }"
-        ${optionalString (nvfTransparent && nvfTheme.name == "base16") ''
+        ${optionalString nvfTransparent ''
           vim.api.nvim_create_autocmd("ColorScheme", {
             group = vim.api.nvim_create_augroup("zdesktop_transparent", { clear = true }),
             callback = function()
@@ -209,7 +224,7 @@
       '';
     }
     // optionalAttrs (nvfTheme ? style) {
-      style = mkDefault nvfTheme.style;
+      style = mkNvfDefault nvfTheme.style;
     }
     // optionalAttrs (nvfTheme.name == "base16") {
       base16-colors = nvfBase16Colors;
@@ -254,8 +269,10 @@ in {
 
         nvf/Neovim: maps the selected theme to `programs.nvf.settings.vim.theme`
         (named plugin + style, or base16 from the terminal palette for
-        unmapped themes such as monochrome). Name, style, and transparent use
-        `mkDefault`, so an explicit nvf theme in the host config still wins.
+        unmapped themes such as monochrome). Enable, name, style, and
+        transparent use a priority above nvf's `mkDefault` so they actually
+        apply, but below a bare assignment so an explicit nvf theme in the
+        host config still wins.
         Sets `vim.opt.background` from `dark_mode` so light variants (e.g.
         rose-pine dawn) load correctly.
 
@@ -308,6 +325,9 @@ in {
         theme = mkDefault {
           name = resolvedGtkTheme;
         };
+        # HM 26.05+: gtk.gtk4.theme no longer follows gtk.theme. Palette
+        # theming is extraCss; gtk-theme-name is a GTK 4 workaround anyway.
+        gtk4.theme = mkDefault null;
         gtk3.extraConfig = {
           gtk-application-prefer-dark-theme = darkMode;
         };
