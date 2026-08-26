@@ -2,6 +2,7 @@ pragma Singleton
 import QtQml
 import Quickshell
 import qs.core
+import "launcherFilter.js" as LauncherFilter
 
 Singleton {
     id: root
@@ -41,71 +42,7 @@ Singleton {
     }
 
     function primaryCategory(app) {
-        const categories = app.categories;
-        const priority = ["Development", "Game", "Graphics", "Network", "Office", "AudioVideo", "Settings", "System", "Utility", "Education"];
-
-        for (const wanted of priority) {
-            if (categories.indexOf(wanted) >= 0) {
-                return wanted;
-            }
-        }
-
-        return "Other";
-    }
-
-    function textScore(text, query) {
-        if (query.length === 0) {
-            return 1;
-        }
-
-        const words = text.split(/[\s._-]+/);
-
-        if (text === query) {
-            return 10000;
-        }
-        if (text.indexOf(query) === 0) {
-            return 5000;
-        }
-        for (const word of words) {
-            if (word.indexOf(query) === 0) {
-                return 3000;
-            }
-        }
-        if (text.indexOf(query) >= 0) {
-            return 1000;
-        }
-
-        let offset = 0;
-        for (let i = 0; i < query.length; i++) {
-            offset = text.indexOf(query.charAt(i), offset);
-            if (offset < 0) {
-                return 0;
-            }
-            offset++;
-        }
-
-        return 250;
-    }
-
-    function categoryScore(categories, query) {
-        var scr = 0;
-
-        for (const category of categories) {
-            scr = scr + textScore(category, query);
-        }
-
-        return scr;
-    }
-
-    function score(app, query) {
-        const needle = query ? query.trim().toLowerCase() : "";
-        const nameScore = root.textScore(app.name.toLowerCase(), needle);
-        const genericScore = root.textScore(app.generic.toLowerCase(), needle) * 0.65;
-        const commentScore = root.textScore(app.comment.toLowerCase(), needle) * 0.45;
-        const categoryScore = root.textScore(app.categories, needle) * 0.35;
-        const classScore = root.textScore(app.startupWmClass.toLowerCase(), needle) * 0.5;
-
-        return Math.max(nameScore, genericScore, commentScore, categoryScore, classScore);
+        return LauncherFilter.primaryCategory(app.categories);
     }
 
     function refreshFilteredApps() {
@@ -115,30 +52,7 @@ Singleton {
             return;
         }
 
-        const needle = root.query.trim().toLowerCase();
-        const apps = [];
-
-        for (const app of root.apps) {
-            if (root.category !== "all" && app.primaryCategory !== root.category) {
-                continue;
-            }
-
-            const appScore = root.score(app, needle);
-            if (appScore <= 0) {
-                continue;
-            }
-
-            app.launcherScore = appScore;
-            apps.push(app);
-        }
-
-        apps.sort(function (a, b) {
-            if (b.launcherScore !== a.launcherScore) {
-                return b.launcherScore - a.launcherScore;
-            }
-
-            return a.name.localeCompare(b.name);
-        });
+        const apps = LauncherFilter.filterApps(root.apps, root.query, root.category);
 
         if (root.selectedIndex >= apps.length) {
             root.selectedIndex = Math.max(0, apps.length - 1);
@@ -157,16 +71,22 @@ Singleton {
                 continue;
             }
 
+            if (!entry.name) {
+                continue;
+            }
+
             // TODO: clean. not really necessary
             const app = {
-                "name": entry.name,
-                "generic": entry.genericName,
-                "comment": entry.comment,
+                "id": entry.id || "",
+                "name": entry.name || "",
+                "generic": entry.genericName || "",
+                "comment": entry.comment || "",
                 "exec": entry.command,
                 "workingDirectory": entry.workingDirectory,
                 "icon": entry.icon,
-                "categories": entry.categories,
-                "startupWmClass": entry.startupClass,
+                "categories": LauncherFilter.toStringList(entry.categories),
+                "keywords": LauncherFilter.toStringList(entry.keywords),
+                "startupWmClass": entry.startupClass || "",
                 "actions": entry.actions
             };
 
