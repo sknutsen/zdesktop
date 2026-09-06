@@ -47,6 +47,10 @@
       };
     };
 
+    nixosModules = {
+      default = ./modules/nixos/default.nix;
+    };
+
     packages = forAllSystems (system: let
       pkgs = nixpkgsFor.${system};
       qs = inputs.quickshell.packages.${system}.default;

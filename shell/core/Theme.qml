@@ -59,7 +59,10 @@ Singleton {
         const value = function(key, fallback) { return sectionValue(themeText, section, key, fallback); };
 
         root.dark = value("dark_mode", "true") !== "false";
-        root.gtkTheme = value("gtk_theme", "");
+        const activeGtkTheme = sectionValue(themeText, "active", "gtk_theme", "");
+        root.gtkTheme = activeGtkTheme.length > 0
+            ? activeGtkTheme
+            : (root.dark ? "Adwaita-dark" : "Adwaita");
         root.bg = value("term_bg", root.bg);
         root.barBackground = value("normbgcolor", root.bg);
         root.surface = value("normbgcolor", root.bg);
@@ -86,7 +89,9 @@ Singleton {
 
     function applySystemAppearance() {
         const scheme = root.dark ? "prefer-dark" : "prefer-light";
-        const gtkTheme = root.gtkTheme.length > 0 ? root.gtkTheme : "Adwaita";
+        const gtkTheme = root.gtkTheme.length > 0
+            ? root.gtkTheme
+            : (root.dark ? "Adwaita-dark" : "Adwaita");
         const script = "command -v gsettings >/dev/null 2>&1 || exit 0; "
             + "gsettings set org.gnome.desktop.interface color-scheme " + scheme
             + "; gsettings set org.gnome.desktop.interface gtk-theme " + JSON.stringify(gtkTheme);

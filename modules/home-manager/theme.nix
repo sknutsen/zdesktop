@@ -2,6 +2,8 @@
   config,
   lib,
   options,
+  pkgs,
+  osConfig ? {},
   ...
 }: let
   inherit (lib) mkIf mkMerge mkOption mkDefault mkOverride optionalAttrs optionalString types;
@@ -17,12 +19,15 @@
     themesData.theme.${cfg.theme}
     or (throw "zdesktop.theme: unknown theme '${cfg.theme}'");
   darkMode = selectedTheme.dark_mode or true;
-  gtkThemeName = selectedTheme.gtk_theme or null;
-  defaultGtkThemeName = "Adwaita";
+  # Adwaita / Adwaita-dark are always packaged here. Named gtk_theme values
+  # such as "Nordic" are not: a missing name makes GTK3 fall back to Adwaita
+  # light, and Electron/Chromium on X11 treat names without "dark" as light.
   resolvedGtkTheme =
-    if gtkThemeName == null
-    then defaultGtkThemeName
-    else gtkThemeName;
+    if darkMode
+    then "Adwaita-dark"
+    else "Adwaita";
+  gtkThemePackage = pkgs.gnome-themes-extra;
+  linuxDesktop = pkgs.stdenv.hostPlatform.isLinux;
   borderpx = themesData.appearance.borderpx or 1;
 
   hex = key: fallback:
@@ -56,36 +61,85 @@
       paletteIndexes}
   '';
 
-  gtkCss = ''
-    @define-color accent_color ${css "selbordercolor" "81A1C1"};
-    @define-color accent_bg_color ${css "selbordercolor" "81A1C1"};
-    @define-color accent_fg_color ${css "term_bg" "2E3440"};
-    @define-color window_bg_color ${css "term_bg" "2E3440"};
-    @define-color window_fg_color ${css "term_fg" "D8DEE9"};
-    @define-color view_bg_color ${css "normbgcolor" "434C5E"};
-    @define-color view_fg_color ${css "normfgcolor" "D8DEE9"};
-    @define-color headerbar_bg_color ${css "normbgcolor" "434C5E"};
-    @define-color headerbar_fg_color ${css "selfgcolor" "ECEFF4"};
-    @define-color headerbar_border_color ${css "normbordercolor" "3B4252"};
-    @define-color headerbar_backdrop_color ${css "term_bg" "2E3440"};
-    @define-color card_bg_color ${css "normbgcolor" "434C5E"};
-    @define-color card_fg_color ${css "normfgcolor" "D8DEE9"};
-    @define-color popover_bg_color ${css "normbgcolor" "434C5E"};
-    @define-color popover_fg_color ${css "normfgcolor" "D8DEE9"};
-    @define-color dialog_bg_color ${css "normbgcolor" "434C5E"};
-    @define-color dialog_fg_color ${css "normfgcolor" "D8DEE9"};
-    @define-color sidebar_bg_color ${css "term_bg" "2E3440"};
-    @define-color sidebar_fg_color ${css "term_fg" "D8DEE9"};
-    @define-color theme_bg_color ${css "term_bg" "2E3440"};
-    @define-color theme_fg_color ${css "term_fg" "D8DEE9"};
-    @define-color theme_selected_bg_color ${css "selbordercolor" "81A1C1"};
-    @define-color theme_selected_fg_color ${css "term_bg" "2E3440"};
-    @define-color destructive_bg_color ${css "term_color1" "BF616A"};
-    @define-color destructive_fg_color ${css "term_bg" "2E3440"};
-    @define-color success_color ${css "term_color2" "A3BE8C"};
-    @define-color warning_color ${css "term_color3" "EBCB8B"};
-    @define-color error_color ${css "term_color1" "BF616A"};
-    @define-color borders ${css "normbordercolor" "3B4252"};
+  gtkCss = let
+    windowBg = css "term_bg" "2E3440";
+    windowFg = css "term_fg" "D8DEE9";
+    viewBg = css "normbgcolor" "434C5E";
+    viewFg = css "normfgcolor" "D8DEE9";
+    headerFg = css "selfgcolor" "ECEFF4";
+    accent = css "selbordercolor" "81A1C1";
+    accentFg = css "term_bg" "2E3440";
+    border = css "normbordercolor" "3B4252";
+    muted = css "term_color8" "4C566A";
+    danger = css "term_color1" "BF616A";
+    success = css "term_color2" "A3BE8C";
+    warning = css "term_color3" "EBCB8B";
+  in ''
+    /* zdesktop palette overlay from themes.toml theme "${cfg.theme}" */
+    @define-color accent_color ${accent};
+    @define-color accent_bg_color ${accent};
+    @define-color accent_fg_color ${accentFg};
+    @define-color destructive_color ${danger};
+    @define-color destructive_bg_color ${danger};
+    @define-color destructive_fg_color ${accentFg};
+    @define-color success_color ${success};
+    @define-color success_bg_color ${success};
+    @define-color success_fg_color ${accentFg};
+    @define-color warning_color ${warning};
+    @define-color warning_bg_color ${warning};
+    @define-color warning_fg_color ${accentFg};
+    @define-color error_color ${danger};
+    @define-color error_bg_color ${danger};
+    @define-color error_fg_color ${accentFg};
+    @define-color window_bg_color ${windowBg};
+    @define-color window_fg_color ${windowFg};
+    @define-color view_bg_color ${viewBg};
+    @define-color view_fg_color ${viewFg};
+    @define-color headerbar_bg_color ${viewBg};
+    @define-color headerbar_fg_color ${headerFg};
+    @define-color headerbar_border_color ${border};
+    @define-color headerbar_backdrop_color ${windowBg};
+    @define-color headerbar_shade_color ${border};
+    @define-color headerbar_darker_shade_color ${border};
+    @define-color sidebar_bg_color ${windowBg};
+    @define-color sidebar_fg_color ${windowFg};
+    @define-color sidebar_backdrop_color ${windowBg};
+    @define-color sidebar_shade_color ${border};
+    @define-color sidebar_border_color ${border};
+    @define-color secondary_sidebar_bg_color ${windowBg};
+    @define-color secondary_sidebar_fg_color ${windowFg};
+    @define-color secondary_sidebar_backdrop_color ${windowBg};
+    @define-color secondary_sidebar_shade_color ${border};
+    @define-color secondary_sidebar_border_color ${border};
+    @define-color card_bg_color ${viewBg};
+    @define-color card_fg_color ${viewFg};
+    @define-color card_shade_color ${border};
+    @define-color thumbnail_bg_color ${viewBg};
+    @define-color thumbnail_fg_color ${viewFg};
+    @define-color dialog_bg_color ${viewBg};
+    @define-color dialog_fg_color ${viewFg};
+    @define-color popover_bg_color ${viewBg};
+    @define-color popover_fg_color ${viewFg};
+    @define-color popover_shade_color ${border};
+    @define-color shade_color ${border};
+    @define-color scrollbar_outline_color ${border};
+    @define-color theme_bg_color ${windowBg};
+    @define-color theme_fg_color ${windowFg};
+    @define-color theme_base_color ${viewBg};
+    @define-color theme_text_color ${viewFg};
+    @define-color theme_selected_bg_color ${accent};
+    @define-color theme_selected_fg_color ${accentFg};
+    @define-color theme_unfocused_bg_color ${windowBg};
+    @define-color theme_unfocused_fg_color ${windowFg};
+    @define-color theme_unfocused_base_color ${viewBg};
+    @define-color theme_unfocused_text_color ${viewFg};
+    @define-color theme_unfocused_selected_bg_color ${accent};
+    @define-color theme_unfocused_selected_fg_color ${accentFg};
+    @define-color insensitive_bg_color ${windowBg};
+    @define-color insensitive_fg_color ${muted};
+    @define-color insensitive_base_color ${viewBg};
+    @define-color borders ${border};
+    @define-color unfocused_borders ${border};
   '';
 
   desktopEnabled =
@@ -259,13 +313,17 @@ in {
         `org.freedesktop.appearance`), and Qt's platform theme so Qt follows
         GTK.
 
-        Written to `[active].apply_system_theme` in themes.toml so the shell
-        only runs `gsettings` when this option is true.
+        Written to `[active].apply_system_theme` and `[active].gtk_theme` in
+        themes.toml so the shell only runs `gsettings` when this option is
+        true, and so it sets the same gtk-theme name this module installs.
 
-        `gtk_theme` in the selected theme is a theme name only (not packaged
-        here). If a theme omits `gtk_theme`, gtk-theme is reset to Adwaita
-        rather than leaving the previous value. Palette colors are always
-        applied as GTK CSS on top of that.
+        GTK widget theme is Adwaita-dark when `dark_mode` is true and Adwaita
+        when it is false, packaged via `gnome-themes-extra`. `gtk_theme` in
+        themes.toml is ignored: a name that is not installed (e.g. Nordic)
+        makes GTK3 fall back to Adwaita light, and Electron/Chromium on X11
+        treat a gtk-theme name without the substring "dark" as light. Palette
+        colors are applied as GTK 3/4 `extraCss` using libadwaita and GTK3
+        Adwaita tokens.
 
         nvf/Neovim: maps the selected theme to `programs.nvf.settings.vim.theme`
         (named plugin + style, or base16 from the terminal palette for
@@ -282,11 +340,13 @@ in {
         its own; stacking an opaque `Normal` highlight on a translucent
         terminal is what looks mismatched.
 
-        Hyprland's portal does not implement appearance. On NixOS, route
-        Settings to the GTK portal:
-
-            xdg.portal.extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
-            xdg.portal.config.hyprland."org.freedesktop.impl.portal.Settings" = [ "gtk" ];
+        Hyprland's portal does not implement appearance. This module adds
+        `xdg-desktop-portal-gtk` and pins
+        `org.freedesktop.impl.portal.Settings` to `gtk` on Hyprland whenever
+        Home Manager's `xdg.portal` is enabled (the Hyprland module does
+        this). Import `zdesktop.nixosModules.default` on NixOS so the same
+        Settings route and GTK portal are present in the system portal dir
+        even if the HM Hyprland portal package is null.
       '';
     };
 
@@ -306,6 +366,11 @@ in {
         internal = true;
         readOnly = true;
       };
+      gtkThemeName = mkOption {
+        type = types.str;
+        internal = true;
+        readOnly = true;
+      };
     };
   };
 
@@ -313,6 +378,7 @@ in {
     {
       zdesktop.generated = {
         inherit hyprLua ghosttyTheme gtkCss;
+        gtkThemeName = resolvedGtkTheme;
       };
 
       gtk = mkIf (desktopEnabled && cfg.applySystemTheme) {
@@ -324,6 +390,7 @@ in {
         );
         theme = mkDefault {
           name = resolvedGtkTheme;
+          package = gtkThemePackage;
         };
         # HM 26.05+: gtk.gtk4.theme no longer follows gtk.theme. Palette
         # theming is extraCss; gtk-theme-name is a GTK 4 workaround anyway.
@@ -359,6 +426,26 @@ in {
 
       programs.ghostty.settings.theme = mkIf (desktopEnabled && cfg.applySystemTheme) (mkDefault "zdesktop");
     }
+    (mkIf (desktopEnabled && cfg.applySystemTheme && linuxDesktop) {
+      # Hyprland's portal has no Settings/appearance. The HM Hyprland module
+      # enables xdg.portal with only hyprland.portal, which replaces
+      # NIX_XDG_DESKTOP_PORTAL_DIR and hides the system GTK portal. Add GTK
+      # here (plus any NixOS extraPortals) and pin Settings to gtk.
+      xdg.portal.extraPortals =
+        [pkgs.xdg-desktop-portal-gtk]
+        ++ (lib.attrByPath ["xdg" "portal" "extraPortals"] [] osConfig);
+      xdg.portal.config.hyprland = {
+        default = mkDefault ["hyprland" "gtk"];
+        "org.freedesktop.impl.portal.Settings" = ["gtk"];
+      };
+    })
+    (mkIf (desktopEnabled && cfg.applySystemTheme && linuxDesktop && !(config.xdg.portal.enable or false)) {
+      xdg.configFile."xdg-desktop-portal/hyprland-portals.conf".text = ''
+        [preferred]
+        default=hyprland;gtk
+        org.freedesktop.impl.portal.Settings=gtk
+      '';
+    })
     (optionalAttrs nvfPresent {
       programs.nvf.settings.vim.theme = mkIf applyNvfTheme nvfThemeSettings;
     })

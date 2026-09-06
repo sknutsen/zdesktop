@@ -60,6 +60,7 @@
     [active]
     theme = "${desktop.theme}"
     apply_system_theme = ${lib.boolToString desktop.applySystemTheme}
+    gtk_theme = "${desktop.generated.gtkThemeName}"
   '';
 
   themesToml = pkgs.writeText "themes.toml" (
