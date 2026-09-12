@@ -405,14 +405,32 @@ in {
         gtk4.extraCss = mkDefault gtkCss;
       };
 
-      dconf.settings = mkIf (desktopEnabled && cfg.applySystemTheme) {
-        "org/gnome/desktop/interface" = {
-          color-scheme =
-            if darkMode
-            then "prefer-dark"
-            else "prefer-light";
-          gtk-theme = resolvedGtkTheme;
-        };
+      # XWayland (Steam, etc.) draws its own Xcursor. Without a theme name,
+      # ~/.icons/default, and Xresources, it falls back to a different size
+      # than Hyprland's compositor cursor.
+      home.pointerCursor = mkIf (desktopEnabled && linuxDesktop) {
+        enable = true;
+        name = "Adwaita";
+        package = pkgs.adwaita-icon-theme;
+        size = 24;
+        gtk.enable = true;
+        x11.enable = true;
+      };
+
+      dconf.settings = mkIf desktopEnabled {
+        "org/gnome/desktop/interface" = mkMerge [
+          (mkIf (desktopEnabled && linuxDesktop) {
+            cursor-theme = "Adwaita";
+            cursor-size = 24;
+          })
+          (mkIf cfg.applySystemTheme {
+            color-scheme =
+              if darkMode
+              then "prefer-dark"
+              else "prefer-light";
+            gtk-theme = resolvedGtkTheme;
+          })
+        ];
       };
 
       qt = mkIf (desktopEnabled && cfg.applySystemTheme) {
