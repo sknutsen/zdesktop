@@ -46,9 +46,16 @@ if not ok or type(theme) ~= "table" then
   }
 end
 
+-- XWayland clients (Steam, etc.) use Xcursor, not hyprcursor. Size-only env
+-- leaves them on the X11 default theme, which is why the cursor jumps.
+hl.env("XCURSOR_THEME", "Adwaita")
+hl.env("XCURSOR_SIZE", "24")
+hl.env("HYPRCURSOR_SIZE", "24")
+
 hl.on("hyprland.start", function()
-  hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
-  hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP")
+  hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XCURSOR_THEME XCURSOR_SIZE HYPRCURSOR_SIZE")
+  hl.exec_cmd("systemctl --user import-environment WAYLAND_DISPLAY XDG_CURRENT_DESKTOP XCURSOR_THEME XCURSOR_SIZE HYPRCURSOR_SIZE")
+  hl.exec_cmd("hyprctl setcursor Adwaita 24")
   hl.exec_cmd("nm-applet --indicator")
   hl.exec_cmd("swaync")
   hl.exec_cmd("wl-paste --type text --watch cliphist store")
